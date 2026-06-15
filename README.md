@@ -29,6 +29,24 @@ function BlogPage() {
 }
 ```
 
+#### With `<Suspense>` / `useSuspenseQuery`
+
+Drop in `<BoneSuspense>` anywhere you'd use a `<Suspense>` boundary. The skeleton renders as the fallback at runtime, and the CLI captures bones from the resolved children at build time.
+
+```tsx
+import { BoneSuspense } from 'boneyard-js/react'
+
+function Page() {
+  return (
+    <BoneSuspense name="user-card">
+      <UserCard />  {/* uses useSuspenseQuery */}
+    </BoneSuspense>
+  )
+}
+```
+
+No `initialData` or `placeholderData` required — the build-time `--wait` window lets the query resolve naturally. Pass a `fixture` if the query can't finish in time.
+
 ### Vue
 
 ```vue

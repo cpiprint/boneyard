@@ -1,5 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useRef, useState, useEffect, useLayoutEffect } from 'react';
+import { Suspense, useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { normalizeBone } from './types.js';
 import { adjustColor, ensureBuildSnapshotHook, getRegisteredBones, isBuildMode, registerBones, resolveResponsive, SHIMMER, PULSE, DEFAULTS, } from './shared.js';
 ensureBuildSnapshotHook();
@@ -175,4 +175,36 @@ export function Skeleton({ loading, children, name, initialBones, color, darkCol
                             }
                             return _jsx("div", { "data-boneyard-bone": "true", className: resolvedBoneClass, style: boneStyle }, i);
                         }), animationStyle === 'pulse' && (_jsx("style", { children: `@keyframes bp-${uid}{0%,100%{background-color:${resolvedColor}}50%{background-color:${adjustColor(resolvedColor, isDark ? PULSE.darkAdjust : PULSE.lightAdjust)}}}` })), animationStyle === 'shimmer' && (_jsx("style", { children: `@keyframes bs-${uid}{0%{background-position:200% 0}100%{background-position:-200% 0}}` })), staggerMs > 0 && (_jsx("style", { children: `@keyframes by-${uid}{from{opacity:0}to{opacity:1}}` }))] }) }))] }));
+}
+/**
+ * Suspense-aware skeleton wrapper. Use with React's `<Suspense>` model —
+ * components that throw promises (e.g., `useSuspenseQuery`) suspend, and a
+ * `<Skeleton>` is shown as the fallback.
+ *
+ * ```tsx
+ * <BoneSuspense name="user-card">
+ *   <UserCard />  // uses useSuspenseQuery
+ * </BoneSuspense>
+ * ```
+ *
+ * At runtime, behaves like `<Suspense fallback={<Skeleton name="..." loading />}>`.
+ *
+ * At build time (`npx boneyard-js build`), wraps children in `<Suspense>` so a
+ * suspending query doesn't crash extraction. The CLI's `--wait` window lets the
+ * query resolve naturally; the resolved DOM is then snapshotted. Pass `fixture`
+ * for a build-time fallback if the query can't resolve in the wait window.
+ */
+export function BoneSuspense({ children, name, initialBones, color, darkColor, animate, stagger, transition, boneClass, className, fallback, fixture, snapshotConfig, }) {
+    if (isBuildMode()) {
+        const dataAttrs = {};
+        if (name) {
+            dataAttrs['data-boneyard'] = name;
+            if (snapshotConfig) {
+                dataAttrs['data-boneyard-config'] = JSON.stringify(snapshotConfig);
+            }
+        }
+        return (_jsx("div", { className: className, style: { position: 'relative' }, ...dataAttrs, children: _jsx("div", { children: _jsx(Suspense, { fallback: fixture ?? null, children: children }) }) }));
+    }
+    const skeletonFallback = (_jsx(Skeleton, { loading: true, name: name, initialBones: initialBones, color: color, darkColor: darkColor, animate: animate, stagger: stagger, transition: transition, boneClass: boneClass, className: className, fallback: fallback, fixture: fixture, snapshotConfig: snapshotConfig, children: null }));
+    return _jsx(Suspense, { fallback: skeletonFallback, children: children });
 }

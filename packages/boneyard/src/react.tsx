@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useLayoutEffect, type ReactNode } from 'react'
+import { Suspense, useRef, useState, useEffect, useLayoutEffect, type ReactNode } from 'react'
 import { normalizeBone } from './types.js'
 import type { Bone, AnyBone, SkeletonResult, ResponsiveBones, SnapshotConfig, AnimationStyle } from './types.js'
 import {
@@ -303,4 +303,82 @@ export function Skeleton({
       )}
     </div>
   )
+}
+
+export interface BoneSuspenseProps extends Omit<SkeletonProps, 'loading'> {
+  /** Component(s) that suspend — typically using `useSuspenseQuery` or `React.lazy`. */
+  children: ReactNode
+}
+
+/**
+ * Suspense-aware skeleton wrapper. Use with React's `<Suspense>` model —
+ * components that throw promises (e.g., `useSuspenseQuery`) suspend, and a
+ * `<Skeleton>` is shown as the fallback.
+ *
+ * ```tsx
+ * <BoneSuspense name="user-card">
+ *   <UserCard />  // uses useSuspenseQuery
+ * </BoneSuspense>
+ * ```
+ *
+ * At runtime, behaves like `<Suspense fallback={<Skeleton name="..." loading />}>`.
+ *
+ * At build time (`npx boneyard-js build`), wraps children in `<Suspense>` so a
+ * suspending query doesn't crash extraction. The CLI's `--wait` window lets the
+ * query resolve naturally; the resolved DOM is then snapshotted. Pass `fixture`
+ * for a build-time fallback if the query can't resolve in the wait window.
+ */
+export function BoneSuspense({
+  children,
+  name,
+  initialBones,
+  color,
+  darkColor,
+  animate,
+  stagger,
+  transition,
+  boneClass,
+  className,
+  fallback,
+  fixture,
+  snapshotConfig,
+}: BoneSuspenseProps) {
+  if (isBuildMode()) {
+    const dataAttrs: Record<string, string> = {}
+    if (name) {
+      dataAttrs['data-boneyard'] = name
+      if (snapshotConfig) {
+        dataAttrs['data-boneyard-config'] = JSON.stringify(snapshotConfig)
+      }
+    }
+    return (
+      <div className={className} style={{ position: 'relative' }} {...dataAttrs}>
+        <div>
+          <Suspense fallback={fixture ?? null}>{children}</Suspense>
+        </div>
+      </div>
+    )
+  }
+
+  const skeletonFallback = (
+    <Skeleton
+      loading={true}
+      name={name}
+      initialBones={initialBones}
+      color={color}
+      darkColor={darkColor}
+      animate={animate}
+      stagger={stagger}
+      transition={transition}
+      boneClass={boneClass}
+      className={className}
+      fallback={fallback}
+      fixture={fixture}
+      snapshotConfig={snapshotConfig}
+    >
+      {null}
+    </Skeleton>
+  )
+
+  return <Suspense fallback={skeletonFallback}>{children}</Suspense>
 }
