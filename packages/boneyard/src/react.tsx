@@ -33,6 +33,16 @@ interface BoneyardConfig {
   speed?: string
   /** Shimmer gradient angle in degrees. Default: 110 */
   shimmerAngle?: number
+  /**
+   * Which width picks the responsive breakpoint at runtime:
+   * - `'container'` (default): the skeleton container's measured width — matches
+   *   the space the skeleton actually occupies (container-query-like).
+   * - `'viewport'`: `window.innerWidth` — matches how the CLI keys captures
+   *   (by viewport width). Use this when the container is narrower than the
+   *   viewport (app-shell layouts) and container-width selection picks a
+   *   breakpoint captured under a different layout. See #92.
+   */
+  select?: 'container' | 'viewport'
 }
 
 let globalConfig: BoneyardConfig = {}
@@ -98,6 +108,13 @@ export interface SkeletonProps {
    * Stored as a data attribute — the CLI reads it during capture.
    */
   snapshotConfig?: SnapshotConfig
+  /**
+   * Which width selects the responsive breakpoint: `'container'` (default,
+   * the skeleton's measured width) or `'viewport'` (`window.innerWidth`, how
+   * the CLI keys captures). Use `'viewport'` for app-shell layouts where the
+   * container is narrower than the window. See #92.
+   */
+  select?: 'container' | 'viewport'
 }
 
 /**
@@ -122,6 +139,7 @@ export function Skeleton({
   fallback,
   fixture,
   snapshotConfig,
+  select,
 }: SkeletonProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const uid = useRef(Math.random().toString(36).slice(2, 8)).current
@@ -203,7 +221,13 @@ export function Skeleton({
 
   const effectiveBones = initialBones ?? (name ? getRegisteredBones(name) : undefined)
   const viewportWidth = mounted && typeof window !== 'undefined' ? window.innerWidth : 0
-  const resolveWidth = containerWidth > 0 ? containerWidth : viewportWidth
+  // Which width selects the breakpoint. 'container' (default) keeps the
+  // container-query behavior; 'viewport' matches how the CLI keys captures,
+  // for app-shell layouts where the container is narrower than the window (#92).
+  const effectiveSelect = select ?? globalConfig.select ?? 'container'
+  const resolveWidth = effectiveSelect === 'viewport'
+    ? (viewportWidth > 0 ? viewportWidth : containerWidth)
+    : (containerWidth > 0 ? containerWidth : viewportWidth)
   const activeBones = effectiveBones && resolveWidth > 0
     ? resolveResponsive(effectiveBones, resolveWidth)
     : null
@@ -342,6 +366,7 @@ export function BoneSuspense({
   fallback,
   fixture,
   snapshotConfig,
+  select,
 }: BoneSuspenseProps) {
   if (isBuildMode()) {
     const dataAttrs: Record<string, string> = {}
@@ -375,6 +400,7 @@ export function BoneSuspense({
       fallback={fallback}
       fixture={fixture}
       snapshotConfig={snapshotConfig}
+      select={select}
     >
       {null}
     </Skeleton>

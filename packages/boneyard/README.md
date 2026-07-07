@@ -108,6 +108,7 @@ All color values accept any valid CSS color (hex, rgba, hsl, etc.).
 | `shimmerAngle` | `110` | Shimmer gradient angle in degrees |
 | `stagger` | `false` | Delay between bones in ms (`true` = 80ms) |
 | `transition` | `false` | Fade out when loading ends in ms (`true` = 300ms) |
+| `select` | `container` | Width used to pick the responsive breakpoint: `container` (measured width) or `viewport` (`window.innerWidth`). Use `viewport` for app-shell layouts where the container is narrower than the window |
 
 Per-component props override config. Config overrides package defaults.
 

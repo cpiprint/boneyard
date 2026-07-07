@@ -27,6 +27,8 @@ interface BoneyardConfig {
   stagger?: number | boolean
   transition?: number | boolean
   boneClass?: string
+  /** Which width picks the breakpoint: 'container' (default) or 'viewport'. See #92. */
+  select?: 'container' | 'viewport'
 }
 
 let globalConfig: BoneyardConfig = {}
@@ -92,6 +94,13 @@ export interface SkeletonProps {
    * Stored as a data attribute — the CLI reads it during capture.
    */
   snapshotConfig?: SnapshotConfig
+  /**
+   * Which width selects the responsive breakpoint: `'container'` (default) or
+   * `'viewport'` (`window.innerWidth`, how the CLI keys captures). Use
+   * `'viewport'` for app-shell layouts where the container is narrower than
+   * the window. See #92.
+   */
+  select?: 'container' | 'viewport'
 }
 
 /**
@@ -116,6 +125,7 @@ export function Skeleton({
   fallback,
   fixture,
   snapshotConfig,
+  select,
 }: SkeletonProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const uid = useRef(Math.random().toString(36).slice(2, 8)).current
@@ -191,7 +201,12 @@ export function Skeleton({
 
   const effectiveBones = initialBones ?? (name ? getRegisteredBones(name) : undefined)
   const viewportWidth = mounted && typeof window !== 'undefined' ? window.innerWidth : 0
-  const resolveWidth = containerWidth > 0 ? containerWidth : viewportWidth
+  // 'container' (default) keeps container-query selection; 'viewport' matches
+  // how the CLI keys captures — for app-shell layouts (#92).
+  const effectiveSelect = select ?? globalConfig.select ?? 'container'
+  const resolveWidth = effectiveSelect === 'viewport'
+    ? (viewportWidth > 0 ? viewportWidth : containerWidth)
+    : (containerWidth > 0 ? containerWidth : viewportWidth)
   const activeBones = effectiveBones && resolveWidth > 0
     ? resolveResponsive(effectiveBones, resolveWidth)
     : null

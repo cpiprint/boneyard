@@ -62,6 +62,41 @@ describe('Skeleton (build mode)', () => {
   })
 })
 
+// ── Breakpoint selection width (#92) ────────────────────────────────────────
+
+describe('Skeleton (select width)', () => {
+  beforeEach(() => setBuildMode(false))
+
+  const responsive = {
+    breakpoints: {
+      375: { ...userCardBones, viewportWidth: 375, width: 375 },
+      1280: { ...userCardBones, viewportWidth: 1280, width: 1280 },
+    },
+  }
+
+  // SSR (renderToString) has no window/container measurement, so both modes
+  // fall through to width 0 → no overlay. These assert the prop is accepted
+  // and rendering stays stable; runtime width behavior is covered by
+  // resolveResponsive's own tests.
+  it('accepts select="viewport" without error', () => {
+    const html = renderToString(
+      <Skeleton name="user-card" loading={true} initialBones={responsive} select="viewport">
+        <div className="real-content">Hello</div>
+      </Skeleton>,
+    )
+    expect(html).toContain('data-boneyard="user-card"')
+  })
+
+  it('accepts select="container" (default) without error', () => {
+    const html = renderToString(
+      <Skeleton name="user-card" loading={true} initialBones={responsive} select="container">
+        <div className="real-content">Hello</div>
+      </Skeleton>,
+    )
+    expect(html).toContain('data-boneyard="user-card"')
+  })
+})
+
 // ── BoneSuspense ───────────────────────────────────────────────────────────
 
 describe('BoneSuspense (runtime)', () => {
