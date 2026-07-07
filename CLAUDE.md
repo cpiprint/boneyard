@@ -56,7 +56,7 @@ node packages/boneyard/bin/cli.js build http://localhost:PORT --out apps/docs/sr
 
 ```bash
 # Build the package
-pnpm --filter boneyard run build
+pnpm --filter boneyard-js run build
 
 # Build docs
 pnpm --filter boneyard-docs run build
