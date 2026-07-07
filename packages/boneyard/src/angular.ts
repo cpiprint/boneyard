@@ -36,6 +36,8 @@ interface BoneyardConfig {
   stagger?: number | boolean
   transition?: number | boolean
   boneClass?: string
+  /** Which width picks the breakpoint: 'container' (default) or 'viewport'. See #92. */
+  select?: 'container' | 'viewport'
 }
 
 let _globalConfig: BoneyardConfig = {}
@@ -114,6 +116,13 @@ export class SkeletonComponent implements AfterContentInit, AfterViewInit, OnDes
   @Input() boneClass?: string
   @Input() cssClass?: string
   @Input() snapshotConfig?: SnapshotConfig
+  /**
+   * Which width selects the responsive breakpoint: `'container'` (default,
+   * the measured container width) or `'viewport'` (`window.innerWidth`, how
+   * the CLI keys captures). Use `'viewport'` for app-shell layouts where the
+   * container is narrower than the window. See #92.
+   */
+  @Input() select?: 'container' | 'viewport'
 
   @ViewChild('container') containerRef!: ElementRef<HTMLDivElement>
 
@@ -300,7 +309,12 @@ export class SkeletonComponent implements AfterContentInit, AfterViewInit, OnDes
   private updateBones(): void {
     const effectiveBones = this.initialBones ?? (this.name ? getRegisteredBones(this.name) : undefined)
     const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : this.containerWidth
-    const resolveWidth = this.containerWidth > 0 ? this.containerWidth : viewportWidth
+    // 'container' (default) keeps container-query selection; 'viewport' matches
+    // how the CLI keys captures — for app-shell layouts (#92).
+    const select = this.select ?? _globalConfig.select ?? 'container'
+    const resolveWidth = select === 'viewport'
+      ? (viewportWidth > 0 ? viewportWidth : this.containerWidth)
+      : (this.containerWidth > 0 ? this.containerWidth : viewportWidth)
     this.activeBones = effectiveBones && resolveWidth > 0
       ? resolveResponsive(effectiveBones, resolveWidth)
       : null
