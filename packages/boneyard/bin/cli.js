@@ -1259,6 +1259,23 @@ async function runScan() {
   const collected = {}
   let skeletonCount = 0
 
+  // Seed previously-captured bones from disk so re-running a scan (or opening
+  // a single screen) doesn't drop other skeletons from the registry. The
+  // native flow captures one mounted screen at a time, so without this the
+  // registry was rewritten with only the screen visible this run (#87).
+  // Mirrors the web/vite --cdp preservation from #81.
+  const existingBones = {}
+  if (existsSync(scanOutDir)) {
+    try {
+      for (const f of readdirSync(scanOutDir)) {
+        if (!f.endsWith('.bones.json')) continue
+        try {
+          existingBones[f.replace(/\.bones\.json$/, '')] = JSON.parse(readFileSync(join(scanOutDir, f), 'utf-8'))
+        } catch { /* malformed file — a fresh capture will overwrite it */ }
+      }
+    } catch { /* directory unreadable — no-op */ }
+  }
+
   console.log('')
   console.log('  \x1b[1m💀 boneyard build --native\x1b[0m')
   console.log('')
@@ -1277,6 +1294,11 @@ async function runScan() {
     let doneTimer = null
 
     function writeBones() {
+      const freshCount = Object.keys(collected).length
+      // Merge in previously-captured skeletons not seen this run so the
+      // registry keeps them instead of dropping to just this run's screens
+      // (#87). Fresh captures always win over the on-disk copy.
+      mergePreservingExisting(collected, existingBones)
       const names = Object.keys(collected)
       if (names.length === 0) {
         console.log('  \x1b[33m⚠  No bones received.\x1b[0m')
@@ -1284,6 +1306,10 @@ async function runScan() {
         console.log('  and the app is open on device/simulator.\n')
         resolvePromise()
         return
+      }
+      if (freshCount === 0) {
+        const kept = names.length
+        console.log(`  \x1b[33m⚠  No new bones received — keeping ${kept} previously captured skeleton${kept !== 1 ? 's' : ''}.\x1b[0m`)
       }
 
       console.log(`\n  \x1b[2m${'─'.repeat(50)}\x1b[0m`)
